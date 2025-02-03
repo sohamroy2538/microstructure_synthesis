@@ -55,7 +55,7 @@ if __name__ == "__main__":
             create_img_model()
             tensor_squeezed = (create_img_model.img).squeeze().permute(1, 2, 0).cpu().detach()
             # Save and plot the generated image
-            output_path = os.path.join(output_dir, f"output_{i + 1}.png")
+            output_path = os.path.join(output_dir, f"{os.path.basename(image_path[: -4])}_output_{i + 1}.png")
             plt.imshow(tensor_squeezed)
             plt.axis("off")
             plt.savefig(output_path, bbox_inches="tight", pad_inches=0)
