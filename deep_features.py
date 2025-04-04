@@ -16,16 +16,17 @@ class VGG19(nn.Module):
     """
     def __init__(self):
         """
-        If True, the gradients for the VGG params are turned off
+        If True, the gradients for the VGG params are turned off, this is only non texture specific model
         """
         super(VGG19, self).__init__()
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.model = vgg19(weights=VGG19_Weights(VGG19_Weights.DEFAULT)).to(device)
         # note: added one extra maxpool (layer 36) from the vgg... worked well so kept it in
-        self.output_layers = [9, 18, 27, 36]
+        self.output_layers = [1,  4, 6, 9 ,11, 13, 15]
         self.layer_weights = [10**9] * len(self.output_layers)
-        for layer in self.output_layers[1:]:  # convert the maxpool layers to an avgpool
-            self.model.features[layer] = nn.AvgPool2d(kernel_size=2, stride=2)
+        for layer in self.output_layers:
+            if isinstance(self.model.features[layer], nn.MaxPool2d):
+              self.model.features[layer] = nn.AvgPool2d(kernel_size=2, stride=2)
 
         self.feature_maps = []
 
@@ -48,14 +49,17 @@ class VGG19(nn.Module):
         """
         Convert the featuremaps captured by the call method into gram matrices
         """
-        gram_matrices = []
-        self(x)
-        '''for fm in self.feature_maps:
-            _ , n, x, y = fm.size()  # num filters n and (filter dims x and y)
-            F = fm.reshape( n, x * y)  # reshape filterbank into a 2D mat before doing auto correlation
-            gram_mat = (F @ F.t()) / (4. * n * x * y)  # auto corr + normalize by layer output dims
-            gram_matrices.append(gram_mat)'''
-        #return gram_matrices  # if want to return gram matrix
+        image = x[:, [2,1,0], :, :]
+        image = x
+        # [0, 1] --> [0, 255]
+        image = 255 * image
+
+        # remove average color
+        image[:,0,:,:] -= 103.939
+        image[:,1,:,:] -= 116.779
+        image[:,2,:,:] -= 123.68
+
+        self(image)
         return self.feature_maps
 
     def style_loss(self):

@@ -30,8 +30,9 @@ def slicing_loss(image_generated , image_example , example_style = None, use_bco
           activations_example = list_activations_example[l].view(b, dim, n) #.repeat(1, 1, SCALING_FACTOR*SCALING_FACTOR)
           activations_generated = list_activations_generated[l].view(b, dim, n) #view(b, dim, n*SCALING_FACTOR*SCALING_FACTOR)
           # sample random directions
-          Ndirection = dim
-          directions = torch.randn(Ndirection, dim).to(torch.device(device))
+          U, S, Vh = torch.linalg.svd(activations_example, full_matrices=False)  # SVD on example activations
+          directions = Vh[:, :, torch.randperm(Vh.shape[2])[:dim]].to(torch.device("cuda:0")).squeeze()  # Take the first `dim` principal components
+          # Normalize directions
           directions = directions / torch.sqrt(torch.sum(directions**2, dim=1, keepdim=True))
           # project activations over random directions
           projected_activations_example = torch.einsum('bdn,md->bmn', activations_example, directions)

@@ -1,6 +1,7 @@
 #!pip install lpips
 #import lpips
 import torch
+import time
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
@@ -178,11 +179,37 @@ class create_img_dendritic(nn.Module):
             print(f" loss is {loss.item()} image is epoch_{str(epoch)}.png")
 
 
+class create_img_wo_texture_model(nn.Module):
+    def __init__(self, data):
+        super().__init__()
+        set_seed(seed = int(time.time()))
+        self.data = data
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.anchor = torchvision.transforms.Resize((256, 256))(transform_img()(Image.open(data))).unsqueeze(0).to(self.device)
+        self.generated_image = torch.rand_like(self.anchor).to(self.device)
+        self.generated_image = torch.nn.parameter.Parameter(self.generated_image)
+        self.optimizer = torch.optim.LBFGS([self.generated_image], lr=1, max_iter=64, tolerance_grad=0.0)
 
+
+    # LBFGS closure function
+    def closure(self):
+        self.optimizer.zero_grad()
+        loss = slicing_loss(self.generated_image, self.anchor, use_bcos=False)
+        loss.backward()
+        return loss
+    
+    def forward(self):
+        # optimization loop
+        for iteration in range(12):
+            print("iteration", iteration )
+            self.optimizer.step(self.closure)
+        save_image(self.generated_image, f'./output/{os.path.basename(self.data[: -4])}.png')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Image Model Training Script")
+
     parser.add_argument("--task", type=str, default="train_from_scratch" , required=True, help="Path to the image directory")
+    parser.add_argument("--with_texture_model", type=bool, default=True , required=True, help="Whether to create texture specific model")
     parser.add_argument("--image_dir", type=str, required=False, help="Path to the image directory")
     parser.add_argument("--target_dir", type=str, required=False, help="Path to the texture needs rectification directory")
     parser.add_argument("--image_size", type=int, default=256, help="Size of image patch")
@@ -196,10 +223,11 @@ if __name__ == '__main__':
     image_dir = args.image_dir
     if task == "rectify":
         target_dir = args.target_dir
-        epochs = 600
+        epochs = 1500
     use_bcos = args.use_bcos
     img_size = args.image_size
     dendritic_pattern = args.dendritic_pattern
+    with_texture_model = args.with_texture_model
 
     if dendritic_pattern:
         img_size = 256
@@ -212,7 +240,7 @@ if __name__ == '__main__':
             create_img_model.fit(i)
         shutil.copy(f"./create_img_existing/epoch_{epochs}.png", f"./output/rectified_{os.path.basename(target_dir)}")
 
-    elif task == "train_from_scratch":
+    elif task == "train_from_scratch" and not with_texture_model:
         if not dendritic_pattern:
             create_img_model = create_img_normal(image_dir, target_dir, use_bcos=use_bcos , task = "train_from_scratch")
         else:
@@ -224,3 +252,8 @@ if __name__ == '__main__':
         model_save_path = rf"./models/{task}_{os.path.basename(image_dir)}_{img_size}.pth"
         torch.save(create_img_model.state_dict(), model_save_path)
         print(f"Model saved to {model_save_path}")
+
+    elif task == "train_from_scratch" and with_texture_model:
+        create_img_model = create_img_wo_texture_model(image_dir)
+        create_img_model()
+    
