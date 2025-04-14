@@ -237,16 +237,16 @@ if __name__ == '__main__':
     # image_dir is source image directory
     # target_dir is existing method image directory
     if task == "rectify":
-        create_img_model = create_img_normal(image_dir, target_dir, use_bcos=use_bcos, task = "rectify")
+        create_img_model = create_img_normal(image_dir, target_dir, use_bcos=True, task = "rectify")
         for i in range(epochs+1):
             create_img_model.fit(i)
         shutil.copy(f"./create_img_existing/epoch_{epochs}.png", f"./output/rectified_{os.path.basename(target_dir)}")
 
     elif task == "train_from_scratch" and with_texture_model:
         if not dendritic_pattern:
-            create_img_model = create_img_normal(image_dir, target_dir, use_bcos=use_bcos , task = "train_from_scratch")
+            create_img_model = create_img_normal(image_dir, target_dir, use_bcos=True , task = "train_from_scratch")
         else:
-            create_img_model = create_img_dendritic(image_dir, use_bcos=use_bcos)
+            create_img_model = create_img_dendritic(image_dir, use_bcos=True)
        
         for i in range(epochs+1):
             create_img_model.fit(i)
