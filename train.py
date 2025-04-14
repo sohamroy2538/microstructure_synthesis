@@ -215,7 +215,7 @@ if __name__ == '__main__':
     parser.add_argument("--target_dir", type=str, required=False, help="Path to the texture needs rectification directory")
     parser.add_argument("--image_size", type=int, default=256, help="Size of image patch")
     parser.add_argument("--dendritic_pattern", type=bool, default=False, required=False, help="If texture has long range dendritic dependancy")    
-    parser.add_argument("--epochs", type=int, default=6000, help="Number of epochs to train")
+    parser.add_argument("--epochs", type=int, default=5000, help="Number of epochs to train")
     parser.add_argument("--num_images", type=int, default=1, help="Number of images to generate for non texture model")
 
     args = parser.parse_args()
@@ -229,6 +229,8 @@ if __name__ == '__main__':
     img_size = args.image_size
     dendritic_pattern = args.dendritic_pattern
     with_texture_model = args.with_texture_model
+
+    print(with_texture_model)
     num_images = args.num_images
 
     if dendritic_pattern:
