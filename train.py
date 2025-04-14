@@ -226,7 +226,6 @@ if __name__ == '__main__':
     if task == "rectify":
         target_dir = args.target_dir
         epochs = 1500
-    use_bcos = args.use_bcos
     img_size = args.image_size
     dendritic_pattern = args.dendritic_pattern
     with_texture_model = args.with_texture_model
