@@ -210,7 +210,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Image Model Training Script")
 
     parser.add_argument("--task", type=str, default="train_from_scratch" , required=True, help="Path to the image directory")
-    parser.add_argument("--with_texture_model", type=bool, default=True , help="Whether to create texture specific model")
+    parser.add_argument("--with_texture_model", type=bool, default=True ,  action="store_false", help="Whether to create texture specific model")
     parser.add_argument("--image_dir", type=str, required=False, help="Path to the image directory")
     parser.add_argument("--target_dir", type=str, required=False, help="Path to the texture needs rectification directory")
     parser.add_argument("--image_size", type=int, default=256, help="Size of image patch")
@@ -230,7 +230,7 @@ if __name__ == '__main__':
     dendritic_pattern = args.dendritic_pattern
     with_texture_model = args.with_texture_model
 
-    print(with_texture_model)
+    (with_texture_model)
     num_images = args.num_images
 
     if dendritic_pattern:
