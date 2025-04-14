@@ -6,7 +6,7 @@ from utils import *
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def slicing_loss(image_generated , image_example , example_style = None, use_bcos = True ):
+def slicing_loss(image_generated , image_example , example_style = None, use_bcos = True, vgg_19_object = None ):
       
       if use_bcos:
 
@@ -14,8 +14,8 @@ def slicing_loss(image_generated , image_example , example_style = None, use_bco
         list_activations_example = resnet18_bcos().get_gram_matrices(image_example)
 
       else:
-        list_activations_generated = VGG19().get_gram_matrices(image_generated)
-        list_activations_example = VGG19().get_gram_matrices(image_example)
+        list_activations_generated = vgg_19_object.get_gram_matrices(image_generated)
+        list_activations_example = vgg_19_object.get_gram_matrices(image_example)
 
       # iterate over layers
       loss = 0

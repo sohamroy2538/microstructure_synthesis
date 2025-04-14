@@ -184,6 +184,7 @@ class create_img_wo_texture_model(nn.Module):
         super().__init__()
         set_seed(seed = int(time.time()))
         self.data = data
+        self.vgg19 = VGG19()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.anchor = torchvision.transforms.Resize((256, 256))(transform_img()(Image.open(data))).unsqueeze(0).to(self.device)
         self.generated_image = torch.rand_like(self.anchor).to(self.device)
@@ -194,7 +195,7 @@ class create_img_wo_texture_model(nn.Module):
     # LBFGS closure function
     def closure(self):
         self.optimizer.zero_grad()
-        loss = slicing_loss(self.generated_image, self.anchor, use_bcos=False)
+        loss = slicing_loss(self.generated_image, self.anchor, use_bcos=False, vgg_19_object=self.vgg19)
         loss.backward()
         return loss
     
@@ -203,8 +204,8 @@ class create_img_wo_texture_model(nn.Module):
         for iteration in range(12):
             print("iteration", iteration )
             self.optimizer.step(self.closure)
-        save_image(self.generated_image, f'./output/{os.path.basename(self.data[: -4])}.png')
-
+        return self.generated_image
+    
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Image Model Training Script")
 
@@ -215,7 +216,8 @@ if __name__ == '__main__':
     parser.add_argument("--image_size", type=int, default=256, help="Size of image patch")
     parser.add_argument("--dendritic_pattern", type=bool, default=False, required=False, help="If texture has long range dendritic dependancy")    
     parser.add_argument("--epochs", type=int, default=6000, help="Number of epochs to train")
-    parser.add_argument("--use_bcos", type=bool, default=True, help="Whether to use BCOS (default: True)")
+    parser.add_argument("--num_images", type=int, default=1, help="Number of images to generate for non texture model")
+
     args = parser.parse_args()
 
     epochs = args.epochs
@@ -228,6 +230,7 @@ if __name__ == '__main__':
     img_size = args.image_size
     dendritic_pattern = args.dendritic_pattern
     with_texture_model = args.with_texture_model
+    num_images = args.num_images
 
     if dendritic_pattern:
         img_size = 256
@@ -240,7 +243,7 @@ if __name__ == '__main__':
             create_img_model.fit(i)
         shutil.copy(f"./create_img_existing/epoch_{epochs}.png", f"./output/rectified_{os.path.basename(target_dir)}")
 
-    elif task == "train_from_scratch" and not with_texture_model:
+    elif task == "train_from_scratch" and with_texture_model:
         if not dendritic_pattern:
             create_img_model = create_img_normal(image_dir, target_dir, use_bcos=use_bcos , task = "train_from_scratch")
         else:
@@ -253,7 +256,10 @@ if __name__ == '__main__':
         torch.save(create_img_model.state_dict(), model_save_path)
         print(f"Model saved to {model_save_path}")
 
-    elif task == "train_from_scratch" and with_texture_model:
-        create_img_model = create_img_wo_texture_model(image_dir)
-        create_img_model()
-    
+    elif task == "train_from_scratch" and not with_texture_model:
+        for i in range(num_images):
+            create_img_model = create_img_wo_texture_model(image_dir)
+            generated_image = create_img_model()
+            save_image(generated_image, os.path.join("./output", f"{os.path.basename(image_dir[: -4])}_output_{i + 1}.png"))
+
+        
