@@ -22,7 +22,7 @@ torch.backends.cuda.matmul.allow_tf32 = True
 
 
 class create_img_normal(nn.Module):
-    def __init__(self, data, target_dir =  None , img_size = 256, use_deform_conv = False , use_bcos = True , task = "rectify"):
+    def __init__(self, data, target_dir =  None , img_size = 256,  use_bcos = True , task = "rectify"):
         super().__init__()
         set_seed(seed = 2)
 
@@ -93,11 +93,8 @@ class create_img_normal(nn.Module):
             print(f" loss is {loss.item()} image is epoch_{str(epoch)}.png")
 
 
-
-
-
 class create_img_dendritic(nn.Module):
-    def __init__(self, data , img_size = 256, use_deform_conv = False , use_bcos = True):
+    def __init__(self, data , img_size = 256 , use_bcos = True):
         super().__init__()
         set_seed(seed = 2)
 
@@ -180,13 +177,13 @@ class create_img_dendritic(nn.Module):
 
 
 class create_img_wo_texture_model(nn.Module):
-    def __init__(self, data):
+    def __init__(self, data, img_size = 256):
         super().__init__()
         set_seed(seed = int(time.time()))
         self.data = data
         self.vgg19 = VGG19()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.anchor = torchvision.transforms.Resize((256, 256))(transform_img()(Image.open(data))).unsqueeze(0).to(self.device)
+        self.anchor = torchvision.transforms.Resize((img_size, img_size))(transform_img()(Image.open(data))).unsqueeze(0).to(self.device)
         self.generated_image = torch.rand_like(self.anchor).to(self.device)
         self.generated_image = torch.nn.parameter.Parameter(self.generated_image)
         self.optimizer = torch.optim.LBFGS([self.generated_image], lr=1, max_iter=64, tolerance_grad=0.0)
@@ -213,7 +210,7 @@ if __name__ == '__main__':
     parser.add_argument("--with_texture_model", action="store_true", default=False , help="Whether to create texture specific model")
     parser.add_argument("--image_dir", type=str, required=False, help="Path to the image directory")
     parser.add_argument("--target_dir", type=str, required=False, help="Path to the texture needs rectification directory")
-    parser.add_argument("--image_size", type=int, default=256, help="Size of image patch")
+    parser.add_argument("--image_size", type=int, default=256, help="Size of image ")
     parser.add_argument("--dendritic_pattern", type=bool, default=False, required=False, help="If texture has long range dendritic dependancy")    
     parser.add_argument("--epochs", type=int, default=5000, help="Number of epochs to train")
     parser.add_argument("--num_images", type=int, default=1, help="Number of images to generate for non texture model")
@@ -225,30 +222,28 @@ if __name__ == '__main__':
     image_dir = args.image_dir
     if task == "rectify":
         target_dir = args.target_dir
-        epochs = 1500
     img_size = args.image_size
     dendritic_pattern = args.dendritic_pattern
     with_texture_model = args.with_texture_model
 
-    (with_texture_model)
     num_images = args.num_images
 
-    if dendritic_pattern:
-        img_size = 256
+    #if dendritic_pattern:
+    #    img_size = 256
     
     # image_dir is source image directory
     # target_dir is existing method image directory
     if task == "rectify":
-        create_img_model = create_img_normal(image_dir, target_dir, use_bcos=True, task = "rectify")
+        create_img_model = create_img_normal(image_dir, target_dir, use_bcos=True, img_size=img_size, task = "rectify")
         for i in range(epochs+1):
             create_img_model.fit(i)
         shutil.copy(f"./create_img_existing/epoch_{epochs}.png", f"./output/rectified_{os.path.basename(target_dir)}")
 
     elif task == "train_from_scratch" and with_texture_model:
         if not dendritic_pattern:
-            create_img_model = create_img_normal(image_dir, target_dir, use_bcos=True , task = "train_from_scratch")
+            create_img_model = create_img_normal(image_dir, target_dir, use_bcos=True , img_size=img_size, task = "train_from_scratch")
         else:
-            create_img_model = create_img_dendritic(image_dir, use_bcos=True)
+            create_img_model = create_img_dendritic(image_dir, img_size=img_size, use_bcos=True)
        
         for i in range(epochs+1):
             create_img_model.fit(i)
@@ -259,7 +254,7 @@ if __name__ == '__main__':
 
     elif task == "train_from_scratch" and not with_texture_model:
         for i in range(num_images):
-            create_img_model = create_img_wo_texture_model(image_dir)
+            create_img_model = create_img_wo_texture_model(image_dir, img_size=img_size)
             generated_image = create_img_model()
             save_image(generated_image, os.path.join("./output", f"{os.path.basename(image_dir[: -4])}_output_{i + 1}.png"))
 
